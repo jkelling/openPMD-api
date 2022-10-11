@@ -5,6 +5,8 @@
 #include <memory>
 #include <numeric> // std::iota
 
+#include <mpi.h>
+
 using std::cout;
 using namespace openPMD;
 
@@ -19,13 +21,32 @@ int main()
         return 0;
     }
 
+    {
+        int provided{};
+        MPI_Init_thread(nullptr, nullptr, MPI_THREAD_MULTIPLE, &provided);
+        switch (provided)
+        {
+        case MPI_THREAD_SINGLE:
+            throw std::runtime_error("MPI_THREAD_SINGLE");
+        case MPI_THREAD_FUNNELED:
+            throw std::runtime_error("MPI_THREAD_FUNNELED");
+        case MPI_THREAD_SERIALIZED:
+            throw std::runtime_error("MPI_THREAD_SERIALIZED");
+        case MPI_THREAD_MULTIPLE:
+            std::cout << "MPI_THREAD_MULTIPLE" << std::endl;
+            break;
+        default:
+            throw std::runtime_error("???????????????");
+        }
+    }
+
     // open file for writing
     Series series = Series("electrons.sst", Access::CREATE, R"(
 {
   "adios2": {
     "engine": {
       "parameters": {
-        "DataTransport": "WAN"
+        "DataTransport": "MPI"
       }
     }
   }
@@ -66,6 +87,7 @@ int main()
      * calling the destructor, including the release of file handles.
      */
     series.close();
+    MPI_Finalize();
 
     return 0;
 #else

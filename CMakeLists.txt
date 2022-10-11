@@ -1295,9 +1295,17 @@ if(openPMD_BUILD_TESTING)
             endif()
         endif()
         if(openPMD_HAVE_ADIOS2)
-            add_test(NAME Asynchronous.10_streaming
-                     COMMAND sh -c "$<TARGET_FILE:10_streaming_write> & sleep 1; $<TARGET_FILE:10_streaming_read>"
-                     WORKING_DIRECTORY ${openPMD_RUNTIME_OUTPUT_DIRECTORY})
+            if(openPMD_HAVE_MPI)
+                add_test(NAME Asynchronous.10_streaming
+                        COMMAND sh -c "${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1 $<TARGET_FILE:10_streaming_write> & \
+                            sleep 1; ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1 $<TARGET_FILE:10_streaming_read>"
+                        WORKING_DIRECTORY ${openPMD_RUNTIME_OUTPUT_DIRECTORY})
+            else()
+                add_test(NAME Asynchronous.10_streaming
+                        COMMAND sh -c "$<TARGET_FILE:10_streaming_write> & \
+                            sleep 1; $<TARGET_FILE:10_streaming_read>"
+                        WORKING_DIRECTORY ${openPMD_RUNTIME_OUTPUT_DIRECTORY})
+            endif()
         endif()
     endif()
 

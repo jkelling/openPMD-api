@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 
+#include <mpi.h>
+
 using std::cout;
 using namespace openPMD;
 
@@ -18,12 +20,31 @@ int main()
         return 0;
     }
 
+    {
+        int provided{};
+        MPI_Init_thread(nullptr, nullptr, MPI_THREAD_MULTIPLE, &provided);
+        switch (provided)
+        {
+        case MPI_THREAD_SINGLE:
+            throw std::runtime_error("MPI_THREAD_SINGLE");
+        case MPI_THREAD_FUNNELED:
+            throw std::runtime_error("MPI_THREAD_FUNNELED");
+        case MPI_THREAD_SERIALIZED:
+            throw std::runtime_error("MPI_THREAD_SERIALIZED");
+        case MPI_THREAD_MULTIPLE:
+            std::cout << "MPI_THREAD_MULTIPLE" << std::endl;
+            break;
+        default:
+            throw std::runtime_error("???????????????");
+        }
+    }
+
     Series series = Series("electrons.sst", Access::READ_LINEAR, R"(
 {
   "adios2": {
     "engine": {
       "parameters": {
-        "DataTransport": "WAN"
+        "DataTransport": "MPI"
       }
     }
   }
@@ -52,9 +73,6 @@ int main()
             extents[i] = rc.getExtent();
         }
 
-        // The iteration can be closed in order to help free up resources.
-        // The iteration's content will be flushed automatically.
-        // An iteration once closed cannot (yet) be reopened.
         iteration.close();
 
         for (size_t i = 0; i < 3; ++i)
@@ -82,6 +100,8 @@ int main()
      * calling the destructor, including the release of file handles.
      */
     series.close();
+
+    MPI_Finalize();
 
     return 0;
 #else
