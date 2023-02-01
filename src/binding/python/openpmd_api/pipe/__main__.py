@@ -9,6 +9,7 @@ Authors: Franz Poeschel
 License: LGPLv3+
 """
 import argparse
+import math
 import os  # os.path.basename
 import re
 import sys  # sys.stderr.write
@@ -321,15 +322,16 @@ class pipe:
                 self.inranks = src.get_rank_table(collective=True)
                 out_iteration = write_iterations[in_iteration.iteration_index]
                 sys.stdout.flush()
-                self.__copy(
+                loadedbytes = self.__copy(
                     in_iteration, out_iteration, dump_times,
                     current_path + str(in_iteration.iteration_index) + "/")
                 for deferred in self.loads:
                     deferred.source.load_chunk(
                         deferred.dynamicView.current_buffer(), deferred.offset,
                         deferred.extent)
-                dump_times.now("Closing incoming iteration {}".format(
-                    in_iteration.iteration_index))
+                dump_times.now(
+                    "Closing incoming iteration {} to load {} bytes".format(
+                     in_iteration.iteration_index, loadedbytes))
                 in_iteration.close()
                 dump_times.now("Closing outgoing iteration {}".format(
                     in_iteration.iteration_index))
@@ -347,15 +349,17 @@ class pipe:
             if src.empty:
                 # empty record component automatically created by
                 # dest.reset_dataset()
-                pass
+                return 0
             elif src.constant:
                 dest.make_constant(src.get_attribute("value"))
+                return 0
             else:
                 chunk_table = src.available_chunks()
                 strategy = distribution_strategy(shape, self.comm.rank,
                                                  self.comm.size)
                 my_chunks = strategy.assign(chunk_table, self.inranks,
                                             self.outranks)
+                accum = 0
                 for chunk in my_chunks[
                         self.comm.rank] if self.comm.rank in my_chunks else []:
                     if debug:
@@ -365,21 +369,30 @@ class pipe:
                         print("{}\t{}/{}:\t{} -- {}".format(
                             current_path, self.comm.rank, self.comm.size,
                             chunk.offset, end))
+                    accum += math.prod(chunk.extent)
                     span = dest.store_chunk(chunk.offset, chunk.extent)
                     self.loads.append(
                         deferred_load(src, span, chunk.offset, chunk.extent))
+
+                accum *= dtype.itemsize
+                print(accum, "Bytes for", current_path)
+                return accum
+
         elif isinstance(src, io.Iteration):
-            self.__copy(src.meshes, dest.meshes, dump_times,
-                        current_path + "meshes/")
-            self.__copy(src.particles, dest.particles, dump_times,
+            # m = self.__copy(src.meshes, dest.meshes, dump_times,
+            #             current_path + "meshes/")
+            p = self.__copy(src.particles, dest.particles, dump_times,
                         current_path + "particles/")
+            return p
         elif is_container:
+            acc = 0
             for key in src:
-                self.__copy(src[key], dest[key], dump_times,
+                acc += self.__copy(src[key], dest[key], dump_times,
                             current_path + key + "/")
-            if isinstance(src, io.ParticleSpecies):
-                self.__copy(src.particle_patches, dest.particle_patches,
-                            dump_times)
+            # if isinstance(src, io.ParticleSpecies):
+            #     self.__copy(src.particle_patches, dest.particle_patches,
+            #                 dump_times)
+            return acc
         else:
             raise RuntimeError("Unknown openPMD class: " + str(src))
 
