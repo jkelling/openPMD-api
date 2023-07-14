@@ -199,6 +199,8 @@ def distribution_strategy(dataset_extent,
                                 mpi_rank, mpi_size)
     elif strategy_identifier == 'fail':
         return io.FailingStrategy()
+    elif strategy_identifier == 'discard':
+        return io.DiscardingStrategy()
     else:
         raise RuntimeError("Unknown distribution strategy: " +
                            strategy_identifier)
@@ -218,6 +220,8 @@ class pipe:
         if HAVE_MPI:
             hostinfo = io.HostInfo.MPI_PROCESSOR_NAME
             self.outranks = hostinfo.get_collective(self.comm)
+            my_hostname = self.outranks[self.comm.rank]
+            self.outranks = {i: rank for i, rank in self.outranks.items() if rank == my_hostname}
         else:
             self.outranks = {i: str(i) for i in range(self.comm.size)}
 
