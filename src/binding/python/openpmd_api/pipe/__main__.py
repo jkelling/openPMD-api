@@ -382,7 +382,7 @@ class pipe:
                         deferred_load(src, span, chunk.offset, chunk.extent))
 
                 accum *= dtype.itemsize
-                print(accum, "Bytes for", current_path)
+                # print(accum, "Bytes for", current_path)
                 return accum
 
         elif isinstance(src, io.Iteration):
