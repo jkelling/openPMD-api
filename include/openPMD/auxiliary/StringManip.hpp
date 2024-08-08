@@ -195,42 +195,24 @@ namespace auxiliary
         return s.substr(begin - s.begin(), end.base() - begin);
     }
 
-    template <typename T>
     inline std::string
-    join_generic(std::vector<T> const &vs, std::string const &delimiter)
+    join(std::vector<std::string> const &vs, std::string const &delimiter)
     {
-        auto as_string = [](T const &t) {
-            if constexpr (std::is_same_v<T, std::string>)
-            {
-                return t;
-            }
-            else
-            {
-                return std::to_string(t);
-            }
-        };
         switch (vs.size())
         {
         case 0:
             return "";
         case 1:
-            return as_string(vs[0]);
+            return vs[0];
         default:
             std::ostringstream ss;
-            std::transform(
+            std::copy(
                 vs.begin(),
                 vs.end() - 1,
-                std::ostream_iterator<std::string>(ss, delimiter.c_str()),
-                as_string);
+                std::ostream_iterator<std::string>(ss, delimiter.c_str()));
             ss << *(vs.end() - 1);
             return ss.str();
         }
-    }
-
-    inline std::string
-    join(std::vector<std::string> const &vs, std::string const &delimiter)
-    {
-        return join_generic(vs, delimiter);
     }
 
     /**
