@@ -22,6 +22,7 @@
 #include "openPMD/ChunkInfo_internal.hpp"
 
 #include "openPMD/auxiliary/Mpi.hpp"
+#include "openPMD/auxiliary/StringManip.hpp"
 #include "openPMD/benchmark/mpi/OneDimensionalBlockSlicer.hpp"
 
 #include <algorithm> // std::sort
@@ -409,6 +410,17 @@ namespace chunk_assignment
     PartialAssignment ByHostname::assign(
         PartialAssignment res, RankMeta const &in, RankMeta const &out)
     {
+        std::cout << "INRANKS:\n";
+        for (auto const &[rank, name] : in)
+        {
+            std::cout << rank << ":\t" << name << '\n';
+        }
+        std::cout << "\nOUTRANKS:\n";
+        for (auto const &[rank, name] : out)
+        {
+            std::cout << rank << ":\t" << name << '\n';
+        }
+        std::cout << std::endl;
         // collect chunks by hostname
         std::map<std::string, ChunkTable> chunkGroups;
         ChunkTable &sourceChunks = res.notAssigned;
@@ -471,6 +483,14 @@ namespace chunk_assignment
                     in,
                     ranksOnTargetNode);
             }
+        }
+        std::cout << res.notAssigned.size() << " Chunks unassigned:\n";
+        for (auto const &chunk : res.notAssigned)
+        {
+            std::cout << "\tFROM " << chunk.sourceID << "\t["
+                      << auxiliary::join_generic(chunk.offset, ",") << "]\t["
+                      << auxiliary::join_generic(chunk.extent, ",") << "]"
+                      << std::endl;
         }
         return res;
     }

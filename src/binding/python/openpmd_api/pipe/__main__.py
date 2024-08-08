@@ -293,7 +293,7 @@ def distribution_strategy(dataset_extent,
         return IncreaseGranularity(
             granularity, 1,
             io.FromPartialStrategy(io.ByHostname(io.RoundRobin()),
-                                   io.FailingStrategy()))
+                                   io.DiscardingStrategy()))
     elif strategy_identifier == 'all':
         return io.FromPartialStrategy(IncreaseGranularity(5), LoadAll(mpi_rank))
     elif strategy_identifier == 'roundrobin':
